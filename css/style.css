@@ -1,0 +1,199 @@
+/* ===== カスタムスタイル ===== */
+
+/* スムーズなフォントレンダリング */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ステップセクションのトランジション */
+.step-section {
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.step-section.active {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+/* ドロップゾーン アニメーション */
+.drop-zone.dragover {
+  border-color: #3b82f6;
+  background-color: #eff6ff;
+  transform: scale(1.01);
+}
+
+.drop-zone.dragover .w-14 {
+  background-color: #dbeafe;
+}
+
+/* ファイルキューアイテム */
+.queue-item {
+  animation: slideIn 0.25s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* メールリストアイテム */
+.mail-item {
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ステップインジケーター */
+.step-indicator .step-circle.done {
+  background-color: #10b981;
+  color: white;
+  box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3);
+}
+
+.step-indicator .step-circle.active {
+  background-color: #3b82f6;
+  color: white;
+  box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
+}
+
+.step-indicator .step-circle.inactive {
+  background-color: #e2e8f0;
+  color: #94a3b8;
+  box-shadow: none;
+}
+
+.step-line.done {
+  background-color: #10b981 !important;
+}
+
+/* トースト通知 */
+.toast {
+  animation: toastIn 0.3s ease;
+  pointer-events: auto;
+}
+
+.toast.removing {
+  animation: toastOut 0.3s ease forwards;
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateX(60px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes toastOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(60px);
+  }
+}
+
+/* スクロールバーのスタイル */
+.mail-list-container::-webkit-scrollbar,
+#fileQueue::-webkit-scrollbar,
+#logContent::-webkit-scrollbar {
+  width: 5px;
+}
+
+.mail-list-container::-webkit-scrollbar-track,
+#fileQueue::-webkit-scrollbar-track,
+#logContent::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 99px;
+}
+
+.mail-list-container::-webkit-scrollbar-thumb,
+#fileQueue::-webkit-scrollbar-thumb,
+#logContent::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 99px;
+}
+
+.mail-list-container::-webkit-scrollbar-thumb:hover,
+#fileQueue::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* チェックボックスのカスタムスタイル */
+.mail-checkbox:checked {
+  accent-color: #3b82f6;
+}
+
+/* ローディングスピナー */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spinner {
+  animation: spin 0.8s linear infinite;
+}
+
+/* プログレスバー */
+.progress-bar-fill {
+  transition: width 0.3s ease;
+}
+
+/* ハイライト（フィルタリング時） */
+.highlight {
+  background-color: #fef3c7;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+/* 重複バッジ */
+.dup-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 99px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* フォーカスリング（アクセシビリティ） */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* モーダルオーバーレイ */
+#settingsModal.open {
+  display: flex !important;
+}
+
+/* レスポンシブ調整 */
+@media (max-width: 640px) {
+  .step-indicator span {
+    display: none;
+  }
+  .step-line {
+    margin: 0 0.5rem;
+  }
+}
+
+/* プリント非表示 */
+@media print {
+  header, .step-indicator, button { display: none !important; }
+}
