@@ -3,10 +3,9 @@
  */
 
 const Settings = (() => {
-  const STORAGE_KEY = 'joruri_mail_settings';
+  const STORAGE_KEY = 'joruri_mail_settings_v2';
 
   const defaults = {
-    priorityAddresses: [],
     folderFormat: '{YYYYMMDD}_{件名}',
     maxSubjectLen: 30,
     batDestFolder: '%USERPROFILE%\\Desktop\\メール',
@@ -15,97 +14,62 @@ const Settings = (() => {
 
   let current = { ...defaults };
 
-  // ロード
   function load() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        current = { ...defaults, ...parsed };
-      }
+      if (raw) current = { ...defaults, ...JSON.parse(raw) };
     } catch (e) {
-      console.warn('設定の読み込みに失敗しました:', e);
+      console.warn('設定読み込みエラー:', e);
     }
     applyToUI();
   }
 
-  // 保存
   function save() {
     readFromUI();
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
     } catch (e) {
-      console.warn('設定の保存に失敗しました:', e);
+      console.warn('設定保存エラー:', e);
     }
   }
 
-  // UIから読み込み
   function readFromUI() {
-    const addrRaw = document.getElementById('priorityAddresses')?.value ?? '';
-    current.priorityAddresses = addrRaw
-      .split('\n')
-      .map(s => s.trim().toLowerCase())
-      .filter(Boolean);
-    current.folderFormat = document.getElementById('folderFormat')?.value || defaults.folderFormat;
-    current.maxSubjectLen = parseInt(document.getElementById('maxSubjectLen')?.value) || defaults.maxSubjectLen;
-    current.batDestFolder = document.getElementById('batDestFolder')?.value || defaults.batDestFolder;
-    current.replaceChar = (document.getElementById('replaceChar')?.value || '_')[0] || '_';
+    current.folderFormat   = document.getElementById('folderFormat')?.value  || defaults.folderFormat;
+    current.maxSubjectLen  = parseInt(document.getElementById('maxSubjectLen')?.value) || defaults.maxSubjectLen;
+    current.batDestFolder  = document.getElementById('batDestFolder')?.value  || defaults.batDestFolder;
+    current.replaceChar    = (document.getElementById('replaceChar')?.value || '_')[0] || '_';
   }
 
-  // UIへ反映
   function applyToUI() {
-    const addrEl = document.getElementById('priorityAddresses');
-    if (addrEl) addrEl.value = current.priorityAddresses.join('\n');
-
-    const formatEl = document.getElementById('folderFormat');
-    if (formatEl) formatEl.value = current.folderFormat;
-
-    const maxLenEl = document.getElementById('maxSubjectLen');
-    if (maxLenEl) maxLenEl.value = current.maxSubjectLen;
-
-    const batEl = document.getElementById('batDestFolder');
-    if (batEl) batEl.value = current.batDestFolder;
-
-    const replEl = document.getElementById('replaceChar');
-    if (replEl) replEl.value = current.replaceChar;
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+    set('folderFormat',  current.folderFormat);
+    set('maxSubjectLen', current.maxSubjectLen);
+    set('batDestFolder', current.batDestFolder);
+    set('replaceChar',   current.replaceChar);
   }
 
-  // フォルダ名生成
+  /** フォルダ名を生成する  dateStr: 'YYYY/MM/DD' など */
   function buildFolderName(dateStr, subject) {
-    // dateStr: 'YYYY/MM/DD' or 'YYYY-MM-DD' or 'YYYYMMDD'
-    const parts = parseDateParts(dateStr);
-    const safeSubject = sanitizeFilename(subject, current.replaceChar)
-      .substring(0, current.maxSubjectLen)
-      .trim();
-
+    const p = parseDateParts(dateStr);
+    const safe = sanitizeFilename(subject || '件名なし', current.replaceChar)
+                   .substring(0, current.maxSubjectLen).trim();
     return current.folderFormat
-      .replace('{YYYYMMDD}', `${parts.y}${parts.m}${parts.d}`)
-      .replace('{YYYY}', parts.y)
-      .replace('{MM}', parts.m)
-      .replace('{DD}', parts.d)
-      .replace('{件名}', safeSubject);
+      .replace('{YYYYMMDD}', `${p.y}${p.m}${p.d}`)
+      .replace('{YYYY}', p.y).replace('{MM}', p.m).replace('{DD}', p.d)
+      .replace('{件名}', safe);
   }
 
   function parseDateParts(dateStr) {
-    // 様々な日付形式に対応
-    const s = dateStr.replace(/[\/\-\.]/g, '');
-    if (s.length >= 8) {
-      return { y: s.slice(0, 4), m: s.slice(4, 6), d: s.slice(6, 8) };
-    }
-    return { y: '0000', m: '00', d: '00' };
+    const s = String(dateStr).replace(/[\/\-\.]/g, '');
+    if (s.length >= 8) return { y: s.slice(0,4), m: s.slice(4,6), d: s.slice(6,8) };
+    return { y:'0000', m:'00', d:'00' };
   }
 
-  // ファイル名の禁止文字を除去
   function sanitizeFilename(name, replChar = '_') {
-    return name
-      .replace(/[\\\/:\*\?"<>|]/g, replChar)
-      .replace(/\s+/g, ' ')
-      .trim();
+    return String(name).replace(/[\\\/:\*\?"<>|]/g, replChar).replace(/\s+/g, ' ').trim();
   }
 
-  function get(key) {
-    return current[key];
-  }
+  function get(key) { return current[key]; }
 
-  return { load, save, get, buildFolderName, sanitizeFilename, defaults };
+  return { load, save, get, buildFolderName, sanitizeFilename };
 })();

@@ -22,7 +22,7 @@
         </div>
         <div>
           <h1 class="text-lg font-bold text-slate-800 leading-none">JoruriMail 整理ツール</h1>
-          <p class="text-xs text-slate-400 mt-0.5">メール情報の整理と添付ファイルの自動処理</p>
+          <p class="text-xs text-slate-400 mt-0.5">メール本文・添付ファイルをデスクトップの「メール」フォルダへ自動整理</p>
         </div>
       </div>
       <button id="settingsBtn" class="flex items-center gap-2 px-3 py-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors text-sm">
@@ -35,25 +35,53 @@
     </div>
   </header>
 
+  <!-- 全体フロー説明バナー -->
+  <div class="max-w-6xl mx-auto px-4 pt-5">
+    <div class="bg-blue-50 border border-blue-200 rounded-2xl px-5 py-4 flex gap-4 items-start">
+      <svg class="w-5 h-5 text-blue-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <div class="text-xs text-blue-800 leading-relaxed">
+        <strong class="text-blue-900 text-sm">使い方の流れ</strong><br>
+        <span class="inline-flex items-center gap-1 mt-1">
+          <span class="bg-blue-600 text-white rounded-full w-4 h-4 inline-flex items-center justify-center text-xs font-bold shrink-0">1</span>
+          JoruriMailで<strong>メールを1通開く</strong>
+        </span>
+        　→　
+        <span class="inline-flex items-center gap-1">
+          <span class="bg-blue-600 text-white rounded-full w-4 h-4 inline-flex items-center justify-center text-xs font-bold shrink-0">2</span>
+          <strong>本文をコピー</strong>してSTEP 1に貼り付け・保存
+        </span>
+        　→　
+        <span class="inline-flex items-center gap-1">
+          <span class="bg-blue-600 text-white rounded-full w-4 h-4 inline-flex items-center justify-center text-xs font-bold shrink-0">3</span>
+          <strong>添付ファイル</strong>をダウンロードしてSTEP 2にドロップ
+        </span>
+        　→　
+        <span class="inline-flex items-center gap-1">
+          <span class="bg-blue-600 text-white rounded-full w-4 h-4 inline-flex items-center justify-center text-xs font-bold shrink-0">4</span>
+          <strong>バッチファイルを生成・ダブルクリックで実行</strong>してデスクトップの「メール」フォルダへ整理
+        </span>
+      </div>
+    </div>
+  </div>
+
   <!-- ステップインジケーター -->
-  <div class="max-w-6xl mx-auto px-4 pt-6 pb-2">
+  <div class="max-w-6xl mx-auto px-4 pt-5 pb-2">
     <div class="flex items-center gap-0">
-      <!-- Step 1 -->
       <div class="step-indicator flex items-center" data-step="1">
         <div class="step-circle w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 bg-blue-600 text-white shadow-md shadow-blue-200">1</div>
-        <span class="ml-2 text-sm font-semibold text-blue-700 whitespace-nowrap">メール貼り付け</span>
+        <span class="ml-2 text-sm font-semibold text-blue-700 whitespace-nowrap">本文保存</span>
       </div>
       <div class="step-line flex-1 h-0.5 mx-3 bg-slate-200 transition-all duration-500" id="line-1-2"></div>
-      <!-- Step 2 -->
       <div class="step-indicator flex items-center" data-step="2">
         <div class="step-circle w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 bg-slate-200 text-slate-400">2</div>
-        <span class="ml-2 text-sm font-semibold text-slate-400 whitespace-nowrap step-label-2">重複確認・整理</span>
+        <span class="ml-2 text-sm font-semibold text-slate-400 whitespace-nowrap">添付ファイル整理</span>
       </div>
       <div class="step-line flex-1 h-0.5 mx-3 bg-slate-200 transition-all duration-500" id="line-2-3"></div>
-      <!-- Step 3 -->
       <div class="step-indicator flex items-center" data-step="3">
         <div class="step-circle w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 bg-slate-200 text-slate-400">3</div>
-        <span class="ml-2 text-sm font-semibold text-slate-400 whitespace-nowrap step-label-3">ファイル整理</span>
+        <span class="ml-2 text-sm font-semibold text-slate-400 whitespace-nowrap">バッチ生成</span>
       </div>
     </div>
   </div>
@@ -61,8 +89,9 @@
   <!-- メインコンテンツ -->
   <main class="max-w-6xl mx-auto px-4 py-4 space-y-6">
 
-    <!-- ===== STEP 1: メール貼り付け ===== -->
+    <!-- ===== STEP 1: 本文保存 ===== -->
     <section id="step1" class="step-section bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+
       <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
         <div class="flex items-center gap-3">
           <div class="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center">
@@ -71,222 +100,270 @@
             </svg>
           </div>
           <div>
-            <h2 class="text-base font-bold text-slate-800">STEP 1 — メール一覧を貼り付け</h2>
-            <p class="text-xs text-slate-400">JoruriMailの一覧画面をコピーして貼り付けてください</p>
+            <h2 class="text-base font-bold text-slate-800">STEP 1 — メール本文を貼り付けて保存</h2>
+            <p class="text-xs text-slate-400">JoruriMailで開いたメールの本文をコピーしてここに貼り付けてください</p>
           </div>
         </div>
-        <div class="flex items-center gap-2">
-          <button id="loadSampleBtn" class="text-xs px-3 py-1.5 rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 transition-colors font-medium">
-            サンプルを読み込む
-          </button>
-          <button id="clearTextBtn" class="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors">
-            クリア
-          </button>
+        <!-- 保存済み件数バッジ -->
+        <div id="savedBadge" class="hidden">
+          <span class="bg-emerald-100 text-emerald-700 text-xs font-bold px-3 py-1 rounded-full">
+            <span id="savedCount">0</span> 件保存済み
+          </span>
         </div>
       </div>
+
       <div class="p-6">
-        <!-- ヒント -->
-        <div class="mb-4 p-3 bg-blue-50 rounded-xl border border-blue-100 flex gap-3">
-          <svg class="w-4 h-4 text-blue-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
-          <div class="text-xs text-blue-700 leading-relaxed">
-            <strong>貼り付け形式について：</strong>JoruriMailのメール一覧から、日付・件名・送受信者情報を含むテキストをそのままコピー&ペーストしてください。<br>
-            対応形式：<code class="bg-blue-100 px-1 rounded">YYYY/MM/DD</code> または <code class="bg-blue-100 px-1 rounded">YYYY-MM-DD</code> 形式の日付を含むテキスト
-          </div>
-        </div>
-        <textarea
-          id="mailInput"
-          class="w-full h-52 p-4 border border-slate-200 rounded-xl text-sm font-mono text-slate-700 placeholder-slate-300 resize-none focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition-all bg-slate-50"
-          placeholder="JoruriMailの一覧をここに貼り付けてください...
 
-例:
-2024/01/15  請求書送付のご連絡  billing@example.com
-2024/01/15  請求書送付のご連絡  info@example.com
-2024/01/20  契約書について  contract@example.com"
-        ></textarea>
-        <div class="mt-4 flex items-center justify-between">
-          <div id="inputStatus" class="text-xs text-slate-400"></div>
-          <button id="parseBtn" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-sm shadow-blue-200 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2" disabled>
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-            </svg>
-            解析する
-          </button>
+        <!-- JoruriMailでの操作手順ガイド -->
+        <div class="mb-5 bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <p class="text-xs font-bold text-amber-800 mb-2">📌 JoruriMailでの操作手順</p>
+          <ol class="text-xs text-amber-800 space-y-1 list-none">
+            <li class="flex gap-2"><span class="bg-amber-400 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold shrink-0 text-xs">1</span>JoruriMailでメールを1通開く</li>
+            <li class="flex gap-2"><span class="bg-amber-400 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold shrink-0 text-xs">2</span>本文を<strong>Ctrl+A（全選択）→ Ctrl+C（コピー）</strong>する</li>
+            <li class="flex gap-2"><span class="bg-amber-400 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold shrink-0 text-xs">3</span>下の「件名」「日付」を入力し、本文エリアに<strong>Ctrl+V（貼り付け）</strong>する</li>
+            <li class="flex gap-2"><span class="bg-amber-400 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold shrink-0 text-xs">4</span>「この本文を保存リストに追加」ボタンを押す</li>
+            <li class="flex gap-2"><span class="bg-amber-400 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold shrink-0 text-xs">5</span>次のメールも同様に繰り返す</li>
+          </ol>
         </div>
-      </div>
-    </section>
 
-    <!-- ===== STEP 2: 重複確認・整理 ===== -->
-    <section id="step2" class="step-section bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden opacity-40 pointer-events-none transition-all duration-500">
-      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <div class="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center">
-            <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
-            </svg>
+        <!-- 入力フォーム -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="text-xs font-semibold text-slate-600 block mb-1">件名 <span class="text-rose-400">*</span></label>
+            <input id="mailSubjectInput" type="text"
+              class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-300 bg-slate-50"
+              placeholder="例：【重要】3月請求書のご送付について" />
           </div>
           <div>
-            <h2 class="text-base font-bold text-slate-800">STEP 2 — 重複確認・フォルダ名整理</h2>
-            <p class="text-xs text-slate-400">解析結果を確認し、フォルダ名を編集できます</p>
+            <label class="text-xs font-semibold text-slate-600 block mb-1">日付 <span class="text-rose-400">*</span></label>
+            <input id="mailDateInput" type="date"
+              class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-300 bg-slate-50" />
           </div>
         </div>
-        <div class="flex items-center gap-3" id="step2Stats"></div>
-      </div>
-      <div class="p-6">
-        <!-- サマリーカード -->
-        <div id="summaryCards" class="grid grid-cols-3 gap-3 mb-5"></div>
-        <!-- フィルタ・ソート -->
-        <div class="flex items-center gap-3 mb-4 flex-wrap">
-          <input id="filterInput" type="text" placeholder="件名・日付で絞り込み..." class="flex-1 min-w-48 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-300 bg-white" />
-          <select id="sortSelect" class="px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white text-slate-600">
-            <option value="date-desc">日付 新→旧</option>
-            <option value="date-asc">日付 旧→新</option>
-            <option value="subject">件名順</option>
-          </select>
-          <label class="flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none">
-            <input type="checkbox" id="showDuplicatesOnly" class="w-4 h-4 rounded accent-amber-500" />
-            重複のみ表示
-          </label>
+
+        <div class="mb-4">
+          <label class="text-xs font-semibold text-slate-600 block mb-1">本文 <span class="text-rose-400">*</span></label>
+          <textarea id="mailBodyInput"
+            class="w-full h-44 p-3 border border-slate-200 rounded-xl text-sm font-mono text-slate-700 placeholder-slate-300 resize-none focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition-all bg-slate-50"
+            placeholder="JoruriMailで開いたメールの本文をここに貼り付けてください（Ctrl+V）..."></textarea>
         </div>
-        <!-- メール一覧テーブル -->
-        <div id="mailList" class="space-y-2"></div>
-        <!-- アクションボタン -->
-        <div class="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between flex-wrap gap-3">
-          <div class="flex gap-2">
-            <button id="selectAllBtn" class="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">すべて選択</button>
-            <button id="deselectAllBtn" class="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">すべて解除</button>
-            <button id="exportCsvBtn" class="text-xs px-3 py-1.5 rounded-lg border border-emerald-200 text-emerald-600 hover:bg-emerald-50 transition-colors flex items-center gap-1">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-              </svg>
-              CSVエクスポート
-            </button>
+
+        <div class="flex items-center justify-between">
+          <button id="clearBodyBtn" class="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors">
+            入力をクリア
+          </button>
+          <button id="addToListBtn"
+            class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-sm shadow-blue-200 transition-all flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            この本文を保存リストに追加
+          </button>
+        </div>
+
+        <!-- 保存リスト -->
+        <div id="savedMailsArea" class="mt-6 hidden">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-bold text-slate-700">保存リスト</h3>
+            <div class="flex gap-2">
+              <button id="downloadAllTxtBtn"
+                class="text-xs px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition-colors flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+                全件 .txt 一括ダウンロード
+              </button>
+              <button id="clearSavedListBtn" class="text-xs px-3 py-1.5 rounded-lg border border-rose-200 text-rose-500 hover:bg-rose-50 transition-colors">
+                リストをクリア
+              </button>
+            </div>
           </div>
-          <button id="proceedToStep3Btn" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl shadow-sm shadow-emerald-200 transition-all flex items-center gap-2">
+          <div id="savedMailsList" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
+        </div>
+
+        <!-- STEP2へ進むボタン -->
+        <div class="mt-5 pt-4 border-t border-slate-100 flex justify-end">
+          <button id="proceedToStep2Btn"
+            class="px-6 py-2.5 bg-slate-700 hover:bg-slate-800 text-white text-sm font-semibold rounded-xl transition-all flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
             </svg>
-            ファイル整理へ進む
+            STEP 2（添付ファイル整理）へ進む
           </button>
         </div>
       </div>
     </section>
 
-    <!-- ===== STEP 3: ファイル整理 ===== -->
-    <section id="step3" class="step-section bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden opacity-40 pointer-events-none transition-all duration-500">
-      <div class="px-6 py-4 border-b border-slate-100">
+    <!-- ===== STEP 2: 添付ファイル整理 ===== -->
+    <section id="step2" class="step-section bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden opacity-40 pointer-events-none transition-all duration-500">
+
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
         <div class="flex items-center gap-3">
           <div class="w-7 h-7 rounded-lg bg-violet-100 flex items-center justify-center">
             <svg class="w-4 h-4 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
             </svg>
           </div>
           <div>
-            <h2 class="text-base font-bold text-slate-800">STEP 3 — 添付ファイル整理</h2>
-            <p class="text-xs text-slate-400">ZipファイルをドロップしてZip展開・リネーム・バッチ生成を行います</p>
+            <h2 class="text-base font-bold text-slate-800">STEP 2 — 添付ファイルをドロップ</h2>
+            <p class="text-xs text-slate-400">JoruriMailからダウンロードした添付ファイルをここにドロップして紐付けてください</p>
+          </div>
+        </div>
+        <div id="attachBadge" class="hidden">
+          <span class="bg-violet-100 text-violet-700 text-xs font-bold px-3 py-1 rounded-full">
+            <span id="attachCount">0</span> 件登録済み
+          </span>
+        </div>
+      </div>
+
+      <div class="p-6">
+
+        <!-- 操作ガイド -->
+        <div class="mb-5 bg-purple-50 border border-purple-200 rounded-xl p-4">
+          <p class="text-xs font-bold text-purple-800 mb-2">📌 添付ファイルのダウンロード手順</p>
+          <ol class="text-xs text-purple-800 space-y-1 list-none">
+            <li class="flex gap-2"><span class="bg-purple-400 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold shrink-0 text-xs">1</span>JoruriMailでメールを開き、添付ファイルのリンクをクリックしてダウンロード</li>
+            <li class="flex gap-2"><span class="bg-purple-400 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold shrink-0 text-xs">2</span>ダウンロードされたファイルを下のエリアにドラッグ＆ドロップ</li>
+            <li class="flex gap-2"><span class="bg-purple-400 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold shrink-0 text-xs">3</span>対応するメールを「紐付け先」ドロップダウンで選択する</li>
+            <li class="flex gap-2"><span class="bg-purple-400 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold shrink-0 text-xs">4</span>添付ファイルがない場合はそのままSTEP 3へ進んでください</li>
+          </ol>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+          <!-- 左列: ドロップゾーン -->
+          <div>
+            <div id="dropZone"
+              class="drop-zone border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center cursor-pointer hover:border-violet-400 hover:bg-violet-50 transition-all duration-200">
+              <div class="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                <svg class="w-7 h-7 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                </svg>
+              </div>
+              <p class="text-slate-600 font-semibold mb-1">ここにファイルをドロップ</p>
+              <p class="text-slate-400 text-xs mb-1">PDF・Word・Excel・ZIP・7Z・RAR・TAR・GZ など種類を問いません</p>
+              <p class="text-slate-400 text-sm mb-4">または</p>
+              <label class="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50 cursor-pointer transition-colors font-medium shadow-sm">
+                ファイルを選択
+                <input type="file" id="attachFileInput" multiple class="hidden" />
+              </label>
+              <p class="mt-3 text-xs text-slate-400">複数ファイルを同時にドロップできます</p>
+            </div>
+          </div>
+
+          <!-- 右列: 登録リスト -->
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-semibold text-slate-700">登録済みファイル</h3>
+              <button id="clearAttachBtn" class="text-xs text-slate-400 hover:text-rose-500 transition-colors">クリア</button>
+            </div>
+            <div id="attachQueue" class="space-y-2 max-h-64 overflow-y-auto pr-1">
+              <div class="text-center py-10 text-slate-300" id="attachEmpty">
+                <svg class="w-8 h-8 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+                </svg>
+                <p class="text-sm">ファイルがありません</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP3へ進むボタン -->
+        <div class="mt-5 pt-4 border-t border-slate-100 flex justify-between items-center">
+          <button id="backToStep1Btn" class="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors flex items-center gap-1">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            STEP 1 に戻る
+          </button>
+          <button id="proceedToStep3Btn"
+            class="px-6 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-xl shadow-sm shadow-violet-200 transition-all flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+            STEP 3（バッチ生成）へ進む
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== STEP 3: バッチ生成・実行 ===== -->
+    <section id="step3" class="step-section bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden opacity-40 pointer-events-none transition-all duration-500">
+
+      <div class="px-6 py-4 border-b border-slate-100">
+        <div class="flex items-center gap-3">
+          <div class="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center">
+            <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-slate-800">STEP 3 — バッチファイルを生成して実行</h2>
+            <p class="text-xs text-slate-400">バッチファイルをダウンロードしてダブルクリックで実行するとデスクトップの「メール」フォルダへ自動整理されます</p>
           </div>
         </div>
       </div>
+
       <div class="p-6">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-          <!-- 左列: ドロップエリア + リネーム設定 -->
-          <div class="space-y-4">
-            <!-- ドロップゾーン -->
-            <div
-              id="dropZone"
-              class="drop-zone border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 relative"
-            >
-              <div id="dropZoneContent">
-                <div class="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
-                  <svg class="w-7 h-7 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                  </svg>
-                </div>
-                <p class="text-slate-600 font-semibold mb-1">Zipファイルをここにドロップ</p>
-                <p class="text-slate-400 text-sm mb-4">または</p>
-                <label class="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50 cursor-pointer transition-colors font-medium shadow-sm">
-                  ファイルを選択
-                  <input type="file" id="fileInput" accept=".zip" multiple class="hidden" />
-                </label>
-                <p class="mt-3 text-xs text-slate-400">複数ファイルを同時にドロップできます</p>
-              </div>
-            </div>
-
-            <!-- リネームモード設定 -->
-            <div class="bg-slate-50 rounded-xl p-4 border border-slate-200">
-              <h3 class="text-sm font-semibold text-slate-700 mb-3">リネーム・紐付け設定</h3>
-              <div class="space-y-3">
-                <div>
-                  <label class="text-xs text-slate-500 font-medium block mb-1">リネームモード</label>
-                  <select id="renameMode" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white">
-                    <option value="auto">自動紐付け（ファイル名から日付を検出）</option>
-                    <option value="manual">手動選択（リストから選んで紐付け）</option>
-                    <option value="sequential">連番順に紐付け</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="text-xs text-slate-500 font-medium block mb-1">展開後のフォルダ構造</label>
-                  <select id="folderStructure" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white">
-                    <option value="flat">フラット（YYYYMMDD_件名/ファイル）</option>
-                    <option value="year">年別（YYYY/YYYYMMDD_件名/ファイル）</option>
-                    <option value="yearmonth">年月別（YYYY/MM/YYYYMMDD_件名/ファイル）</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 右列: 処理キューとアクション -->
-          <div class="space-y-4">
-            <!-- 処理キュー -->
-            <div>
-              <div class="flex items-center justify-between mb-3">
-                <h3 class="text-sm font-semibold text-slate-700">処理キュー</h3>
-                <button id="clearQueueBtn" class="text-xs text-slate-400 hover:text-red-500 transition-colors">クリア</button>
-              </div>
-              <div id="fileQueue" class="space-y-2 max-h-52 overflow-y-auto pr-1">
-                <div class="text-center py-8 text-slate-300">
-                  <svg class="w-8 h-8 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                  </svg>
-                  <p class="text-sm">ファイルがありません</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- アクションボタン群 -->
-            <div class="grid grid-cols-1 gap-2">
-              <button id="extractAllBtn" class="w-full py-3 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-xl shadow-sm shadow-violet-200 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed" disabled>
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-                </svg>
-                Zipを展開してダウンロード
-              </button>
-              <button id="generateBatBtn" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-xl shadow-sm shadow-amber-200 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed" disabled>
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
-                </svg>
-                整理用バッチファイルを生成（.bat）
-              </button>
-              <button id="generatePsBtn" class="w-full py-2.5 bg-slate-600 hover:bg-slate-700 text-white text-sm font-medium rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed" disabled>
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                </svg>
-                PowerShellスクリプトを生成（.ps1）
-              </button>
-            </div>
+        <!-- 処理内容プレビュー -->
+        <div class="mb-5">
+          <h3 class="text-sm font-bold text-slate-700 mb-3">整理内容の確認</h3>
+          <div id="previewArea" class="bg-slate-50 rounded-xl border border-slate-200 p-4 space-y-2 max-h-56 overflow-y-auto">
+            <p class="text-xs text-slate-400 text-center py-4">STEP 1・2 の内容がここに表示されます</p>
           </div>
         </div>
 
-        <!-- 処理結果ログ -->
-        <div id="processLog" class="mt-5 hidden">
-          <div class="flex items-center justify-between mb-2">
-            <h3 class="text-sm font-semibold text-slate-700">処理ログ</h3>
-            <button id="clearLogBtn" class="text-xs text-slate-400 hover:text-slate-600">クリア</button>
+        <!-- バッチ実行手順ガイド -->
+        <div class="mb-5 bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <p class="text-xs font-bold text-amber-800 mb-2">📌 実行手順</p>
+          <ol class="text-xs text-amber-800 space-y-1 list-none">
+            <li class="flex gap-2"><span class="bg-amber-400 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold shrink-0 text-xs">1</span>下の「<strong>バッチファイルを生成（.bat）</strong>」ボタンを押す → .bat ファイルがダウンロードされる</li>
+            <li class="flex gap-2"><span class="bg-amber-400 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold shrink-0 text-xs">2</span>添付ファイルが <strong>ダウンロード・デスクトップ・ドキュメント</strong> フォルダのいずれかにあることを確認する</li>
+            <li class="flex gap-2"><span class="bg-amber-400 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold shrink-0 text-xs">3</span>ダウンロードされた <strong>.bat ファイルをダブルクリック</strong>して実行する</li>
+            <li class="flex gap-2"><span class="bg-amber-400 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold shrink-0 text-xs">4</span>完了後 <strong>「Y」→ Enter</strong> でデスクトップの「メール」フォルダが開く</li>
+            <li class="flex gap-2"><span class="bg-amber-400 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold shrink-0 text-xs">5</span><strong>元の添付ファイルは削除されません</strong>。整理後もダウンロードフォルダ等にそのまま残ります</li>
+          </ol>
+        </div>
+        <div class="mb-5 bg-blue-50 border border-blue-200 rounded-xl p-4 flex gap-3 items-start">
+          <svg class="w-5 h-5 text-blue-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <div class="text-xs text-blue-800 leading-relaxed">
+            <strong class="text-blue-900">.zip は自動で再帰展開されます</strong><br>
+            入れ子になった ZIP も最大20段階まで完全展開します。<br>
+            .7z / .rar / .tar / .gz 等は <a href="https://www.7-zip.org/" target="_blank" class="underline text-blue-600">7-Zip</a> をインストールすることで展開できます（未インストール時はコピーのみ）。
           </div>
-          <div id="logContent" class="bg-slate-900 rounded-xl p-4 font-mono text-xs text-slate-300 space-y-1 max-h-40 overflow-y-auto"></div>
+        </div>
+
+        <!-- アクションボタン -->
+        <div class="flex justify-center">
+          <button id="generateBatBtn"
+            class="w-full max-w-sm py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-sm shadow-blue-200 transition-all flex items-center justify-center gap-2 text-sm">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+            </svg>
+            バッチファイルを生成（.bat）
+          </button>
+        </div>
+
+        <!-- 整理後のフォルダ構造イメージ -->
+        <div class="mt-5 bg-slate-900 rounded-xl p-4 font-mono text-xs text-slate-300">
+          <p class="text-slate-500 mb-2"># 整理後のフォルダ構造イメージ</p>
+          <p class="text-emerald-400">デスクトップ\メール\</p>
+          <div id="folderStructurePreview" class="mt-1 space-y-0.5 text-slate-300">
+            <p class="text-slate-500">　（STEP 1・2 で登録した内容が表示されます）</p>
+          </div>
+        </div>
+
+        <!-- 戻るボタン -->
+        <div class="mt-4 flex justify-start">
+          <button id="backToStep2Btn" class="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors flex items-center gap-1">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            STEP 2 に戻る
+          </button>
         </div>
       </div>
     </section>
@@ -305,37 +382,28 @@
         </button>
       </div>
       <div class="p-6 space-y-5">
-        <!-- 優先アドレス設定 -->
-        <div>
-          <label class="text-sm font-semibold text-slate-700 block mb-2">優先メールアドレス（重複排除用）</label>
-          <p class="text-xs text-slate-400 mb-3">同一件名・日付のメールが複数ある場合、このアドレスを優先して残します。複数指定は改行で区切ってください。</p>
-          <textarea id="priorityAddresses" class="w-full h-28 p-3 border border-slate-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none bg-slate-50" placeholder="info@example.com&#10;billing@example.com"></textarea>
-        </div>
-        <!-- フォルダ名フォーマット -->
         <div>
           <label class="text-sm font-semibold text-slate-700 block mb-2">フォルダ名フォーマット</label>
-          <input id="folderFormat" type="text" value="{YYYYMMDD}_{件名}" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 bg-slate-50" />
+          <input id="folderFormat" type="text" value="{YYYYMMDD}_{件名}"
+            class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 bg-slate-50" />
           <p class="text-xs text-slate-400 mt-1">使用可能: {YYYYMMDD}, {YYYY}, {MM}, {DD}, {件名}</p>
         </div>
-        <!-- 件名の最大文字数 -->
         <div>
           <label class="text-sm font-semibold text-slate-700 block mb-2">件名の最大文字数</label>
-          <input id="maxSubjectLen" type="number" value="30" min="5" max="100" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 bg-slate-50" />
-          <p class="text-xs text-slate-400 mt-1">フォルダ名に含める件名の最大文字数</p>
+          <input id="maxSubjectLen" type="number" value="30" min="5" max="100"
+            class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 bg-slate-50" />
         </div>
-        <!-- 保存先フォルダ（bat用） -->
         <div>
-          <label class="text-sm font-semibold text-slate-700 block mb-2">バッチ用保存先フォルダパス</label>
-          <input id="batDestFolder" type="text" value="%USERPROFILE%\Desktop\メール" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-200 bg-slate-50" />
-          <p class="text-xs text-slate-400 mt-1">バッチファイルが整理先として使用するフォルダパス</p>
+          <label class="text-sm font-semibold text-slate-700 block mb-2">保存先フォルダパス</label>
+          <input id="batDestFolder" type="text" value="%USERPROFILE%\Desktop\メール"
+            class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-200 bg-slate-50" />
+          <p class="text-xs text-slate-400 mt-1">デスクトップの「メール」フォルダが初期値です</p>
         </div>
-        <!-- 禁止文字置換 -->
         <div>
           <label class="text-sm font-semibold text-slate-700 block mb-2">ファイル名禁止文字の置換文字</label>
-          <input id="replaceChar" type="text" value="_" maxlength="1" class="w-24 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 bg-slate-50" />
-          <p class="text-xs text-slate-400 mt-1">\ / : * ? " &lt; &gt; | などを置換します</p>
+          <input id="replaceChar" type="text" value="_" maxlength="1"
+            class="w-24 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 bg-slate-50" />
         </div>
-        <!-- 保存ボタン -->
         <button id="saveSettingsBtn" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors">
           設定を保存
         </button>
@@ -346,11 +414,7 @@
   <!-- トースト通知 -->
   <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
 
-  <!-- メインスクリプト -->
   <script src="js/settings.js"></script>
-  <script src="js/parser.js"></script>
-  <script src="js/mailList.js"></script>
-  <script src="js/fileProcessor.js"></script>
   <script src="js/batchGenerator.js"></script>
   <script src="js/app.js"></script>
 </body>

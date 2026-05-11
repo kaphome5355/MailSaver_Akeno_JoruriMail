@@ -1,266 +1,331 @@
 /**
- * batchGenerator.js — Windowsバッチ(.bat) / PowerShell(.ps1) スクリプト生成
+ * batchGenerator.js
+ * 保存済みメール本文(.txt) と 添付ファイルを
+ * デスクトップの「メール」フォルダへ整理するバッチ (.bat) を生成
+ *
+ * v5 — BAT版に一本化・元圧縮ファイルを削除しない
+ *   [変更1] PS1版（generatePs）を廃止。BAT版のみに統一。
+ *           理由: PS1版はファイル書き出し時の文字エスケープ問題が根本的に
+ *                 解決できず、動作が不安定。BAT版の -EncodedCommand 方式が
+ *                 安定しており同等機能を提供できる。
+ *   [変更2] 元の圧縮ファイルを削除しない。
+ *           展開・コピー後も元ファイルはそのままにしておく。
+ *           （旧: del /f /q "!ATT_FILE!" を除去）
+ *   [変更3] 通常ファイルのコピー後も元ファイルを削除しない。
+ *
+ * v4からの引き継ぎ:
+ *   [修正A] 多パス再帰展開ロジック（最大20パス、入れ子ZIP完全対応）
+ *   [修正1] :: コメントを rem に変更
+ *   [修正2] 本文保存を -EncodedCommand（UTF-16LE Base64）方式に変更
+ *   [修正3] ZIP展開PS1の echo 書き出し方式を廃止 → -EncodedCommand 方式に変更
  */
 
 const BatchGenerator = (() => {
 
-  /**
-   * Windowsバッチファイル(.bat)を生成してダウンロード
-   */
-  function generateBat(queue, mailEntries) {
-    if (!queue || queue.length === 0) {
-      Toast.show('処理キューにファイルがありません', 'warning');
+  // ================================================================
+  //  ブラウザ側ユーティリティ: 文字列 → UTF-16LE Base64
+  //  PowerShell の -EncodedCommand 引数に渡す形式
+  // ================================================================
+  function toBase64Cmd(psScript) {
+    const buf = [];
+    for (let i = 0; i < psScript.length; i++) {
+      const c = psScript.charCodeAt(i);
+      buf.push(c & 0xff, (c >> 8) & 0xff);
+    }
+    let bin = '';
+    for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+    return btoa(bin);
+  }
+
+  // ================================================================
+  //  バッチファイル (.bat) 生成  v5
+  //
+  //  【設計方針】
+  //  .bat は「起動ランチャー」に徹し、全ての実質処理を
+  //  -EncodedCommand（UTF-16LE Base64）で渡す単発 PowerShell 呼び出しに委ねる。
+  //  これにより echo/:: によるエスケープ問題を根絶する。
+  //
+  //  処理フロー:
+  //    1. フォルダ作成        → PowerShell -EncodedCommand
+  //    2. 本文.txt 保存       → PowerShell -EncodedCommand
+  //    3. 添付ファイル検索    → bat の FOR ループ（ファイルパス取得のみ）
+  //    4. アーカイブ展開      → PowerShell -EncodedCommand（多パス再帰展開）
+  //    5. 通常ファイルコピー  → PowerShell -EncodedCommand
+  //    ※ 元ファイルは削除しない（コピー元をそのまま残す）
+  // ================================================================
+  function generateBat(savedMails, attachItems) {
+    if (!savedMails || savedMails.length === 0) {
+      Toast.show('STEP 1 で本文を保存リストに追加してください', 'warning');
       return;
     }
 
-    const dest = Settings.get('batDestFolder') || '%USERPROFILE%\\Desktop\\メール';
-    const today = formatDate(new Date());
-    const lines = [];
+    const dest  = Settings.get('batDestFolder') || '%USERPROFILE%\\Desktop\\メール';
+    const today = fmtDate(new Date());
+    const L = [];
 
-    // ===== ヘッダー =====
-    lines.push('@echo off');
-    lines.push('chcp 65001 > nul');
-    lines.push('setlocal EnableDelayedExpansion');
-    lines.push('');
-    lines.push(`:: ============================================================`);
-    lines.push(`:: JoruriMail 整理バッチファイル`);
-    lines.push(`:: 生成日時: ${today}`);
-    lines.push(`:: 保存先: ${dest}`);
-    lines.push(`:: ============================================================`);
-    lines.push('');
-    lines.push(':: 保存先フォルダの作成');
-    lines.push(`set "DEST=${dest}"`);
-    lines.push('if not exist "%DEST%" mkdir "%DEST%"');
-    lines.push('');
-    lines.push('echo.');
-    lines.push('echo  JoruriMail 整理スクリプトを開始します...');
-    lines.push('echo  保存先: %DEST%');
-    lines.push('echo.');
-    lines.push('');
+    L.push('@echo off');
+    L.push('chcp 65001 > nul');
+    L.push('setlocal EnableDelayedExpansion');
+    L.push('');
+    L.push('rem ====================================================');
+    L.push('rem JoruriMail 整理バッチファイル  v5');
+    L.push('rem 生成日時 : ' + today);
+    L.push('rem 保存先   : ' + dest);
+    L.push('rem ====================================================');
+    L.push('');
+    L.push('set "DEST=' + dest + '"');
+    L.push('if not exist "%DEST%" mkdir "%DEST%"');
+    L.push('echo.');
+    L.push('echo  === JoruriMail 整理開始 ===');
+    L.push('echo  保存先: %DEST%');
+    L.push('echo.');
+    L.push('');
 
-    // ===== Zipファイルの展開処理 =====
-    lines.push(':: ---- Zipファイルの展開 ----');
-    lines.push('');
+    savedMails.forEach((mail, idx) => {
+      const safeFolder = winSafe(mail.folderName);
+      const label      = 'M' + idx;
 
-    queue.forEach((item, idx) => {
-      const folderName = item.folderName || item.file.name.replace(/\.zip$/i, '');
-      const safeFolder = sanitizeWindowsPath(folderName);
-      const origName = item.file.name;
+      L.push('rem ---- [' + (idx + 1) + '/' + savedMails.length + '] ' + safeFolder + ' ----');
+      L.push('set "MAIL_DIR=%DEST%\\' + safeFolder + '"');
+      L.push('if not exist "!MAIL_DIR!" mkdir "!MAIL_DIR!"');
+      L.push('');
 
-      lines.push(`:: [${idx + 1}] ${origName}`);
-      lines.push(`set "FOLDER_NAME=${safeFolder}"`);
-      lines.push(`set "TARGET_DIR=%DEST%\\!FOLDER_NAME!"`);
-      lines.push('');
-      lines.push(':: ダウンロードフォルダからZipを検索');
-      lines.push(`set "ZIP_CANDIDATES="`);
-      lines.push(`for %%f in ("%USERPROFILE%\\Downloads\\${sanitizeWindowsPath(origName)}" "%USERPROFILE%\\Desktop\\${sanitizeWindowsPath(origName)}") do (`);
-      lines.push('  if exist "%%f" set "ZIP_FILE=%%f"');
-      lines.push(')');
-      lines.push('');
-      lines.push(`if not defined ZIP_FILE (`);
-      lines.push(`  echo  [警告] Zipファイルが見つかりません: ${origName}`);
-      lines.push(`  goto :next_${idx}`);
-      lines.push(')');
-      lines.push('');
-      lines.push(`if not exist "!TARGET_DIR!" mkdir "!TARGET_DIR!"`);
-      lines.push('');
-      lines.push(':: PowerShellを使用してZip展開');
-      lines.push(`powershell -NoProfile -Command "Expand-Archive -LiteralPath '!ZIP_FILE!' -DestinationPath '!TARGET_DIR!' -Force"`);
-      lines.push('');
-      lines.push('if %errorlevel% == 0 (');
-      lines.push(`  echo  [OK] 展開完了: !FOLDER_NAME!`);
-      lines.push(`  del /f /q "!ZIP_FILE!"`);
-      lines.push(`  echo  [OK] Zipを削除: ${origName}`);
-      lines.push(') else (');
-      lines.push(`  echo  [エラー] 展開に失敗しました: ${origName}`);
-      lines.push(')');
-      lines.push('');
-      lines.push(`:next_${idx}`);
-      lines.push('set "ZIP_FILE="');
-      lines.push('');
-    });
+      // ── 本文.txt 保存（EncodedCommand方式）──────────────────
+      const bodyText =
+        '件名: ' + mail.subject + '\r\n' +
+        '日付: ' + mail.date   + '\r\n' +
+        '='.repeat(40)         + '\r\n\r\n' +
+        mail.body;
 
-    // ===== フォルダ一覧の作成（対象メールのみ）=====
-    if (mailEntries && mailEntries.length > 0) {
-      lines.push('');
-      lines.push(':: ---- 対象メールのフォルダ一覧を作成 ----');
-      lines.push('');
-      lines.push(`set "LIST_FILE=%DEST%\\mail_folder_list_${today}.txt"`);
-      lines.push(`echo JoruriMail フォルダ一覧 (${today}) > "%LIST_FILE%"`);
-      lines.push(`echo ============================== >> "%LIST_FILE%"`);
-      mailEntries
-        .filter(e => e.isKept !== false)
-        .forEach(e => {
-          const safe = sanitizeWindowsPath(e.folderName);
-          lines.push(`echo ${safe} >> "%LIST_FILE%"`);
+      const bodyB64 = toBase64Cmd(
+        '[Console]::OutputEncoding=[Text.Encoding]::UTF8;' +
+        '[IO.File]::WriteAllText(' +
+          '(Join-Path $env:MAIL_DIR "メール本文.txt"),' +
+          '[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String("' +
+            btoa(unescape(encodeURIComponent(bodyText))) +
+          '")),' +
+          '[Text.Encoding]::UTF8' +
+        ')'
+      );
+      L.push('rem 本文.txt を保存');
+      L.push('powershell -NoProfile -NonInteractive -EncodedCommand ' + bodyB64);
+      L.push('if %errorlevel%==0 (');
+      L.push('  echo  [OK] 本文保存: ' + safeFolder + '\\メール本文.txt');
+      L.push(') else (');
+      L.push('  echo  [エラー] 本文保存失敗: ' + safeFolder);
+      L.push(')');
+      L.push('');
+
+      // ── 添付ファイル処理 ─────────────────────────────────────
+      const linked = attachItems.filter(a => a.folderName === mail.folderName);
+      if (linked.length > 0) {
+        linked.forEach((att, ai) => {
+          const fname       = winSafe(att.file.name);
+          const fnameLow    = fname.toLowerCase();
+          const archiveExts = ['.zip','.7z','.rar','.tar','.gz','.tgz','.bz2','.xz','.lzh','.cab'];
+          const isArchive   = archiveExts.some(e => fnameLow.endsWith(e));
+          const nextLabel   = 'NEXT_' + label + '_' + ai;
+
+          // ファイルをダウンロード・デスクトップ・ドキュメントから検索
+          L.push('set "ATT_FILE="');
+          L.push('for %%D in ("%USERPROFILE%\\Downloads" "%USERPROFILE%\\Desktop" "%USERPROFILE%\\Documents") do (');
+          L.push('  if exist "%%~D\\' + fname + '" set "ATT_FILE=%%~D\\' + fname + '"');
+          L.push(')');
+          L.push('if not defined ATT_FILE (');
+          L.push('  echo  [警告] 見つかりません（Downloads/Desktop/Documents を確認）: ' + fname);
+          L.push('  goto :' + nextLabel);
+          L.push(')');
+          L.push('');
+
+          if (isArchive) {
+            // ============================================================
+            // アーカイブ: 多パス再帰展開ロジック（最大20パス）
+            //
+            // 手順:
+            //   1. $src（元ファイル）を $dst（メールフォルダ）へコピー
+            //      ※ 元ファイルは削除しない
+            //   2. $dst 内にアーカイブがなくなるまでループ展開:
+            //      各アーカイブを tmpDir へ展開 → SmartFlatten → $dst へ移動
+            //      → tmpDir 削除 → アーカイブ本体削除（コピー先のみ）
+            //   3. 空フォルダを削除
+            //
+            // 対応形式:
+            //   .zip → Expand-Archive 試行 → 失敗なら 7-Zip
+            //   .7z/.rar/.tar/.gz 等 → 7-Zip 直接
+            //   7-Zip 未インストール → 警告してコピーのみ
+            // ============================================================
+            const arcPsScript = [
+              'param()',
+              '$src=$env:ATT_FILE;$dst=$env:MAIL_DIR;',
+              '[Console]::OutputEncoding=[Text.Encoding]::UTF8;',
+
+              // ---- Get-UniqueFileName（インライン関数）
+              'function gufn{param($d,$f)',
+              '  $b=[IO.Path]::GetFileNameWithoutExtension($f);',
+              '  $e=[IO.Path]::GetExtension($f);',
+              '  $c=Join-Path $d $f;$n=1;',
+              '  while(Test-Path $c){$c=Join-Path $d "$b($n)$e";$n++};',
+              '  return $c}',
+
+              // ---- SmartFlatten（インライン関数）
+              // 展開フォルダ直下が1つのフォルダだけなら中身を上げる
+              'function flatten{param($d)',
+              '  while($true){',
+              '    $it=@(Get-ChildItem -LiteralPath $d -Force);',
+              '    if($it.Count -eq 1 -and $it[0].PSIsContainer){',
+              '      $ch=$it[0].FullName;',
+              '      Get-ChildItem -LiteralPath $ch -Force|%{',
+              '        $x=gufn $d $_.Name;',
+              '        Move-Item -LiteralPath $_.FullName -Destination $x -Force -EA SilentlyContinue};',
+              '      Remove-Item -LiteralPath $ch -Recurse -Force -EA SilentlyContinue',
+              '    }else{break}}}',
+
+              // ---- 7-Zip パス解決
+              '$7zPaths=@(',
+              '  ($env:ProgramFiles+"\\7-Zip\\7z.exe"),',
+              '  (${env:ProgramFiles(x86)}+"\\7-Zip\\7z.exe"),',
+              '  ($env:LOCALAPPDATA+"\\Programs\\7-Zip\\7z.exe"));',
+              '$7z=$null;',
+              'foreach($p in $7zPaths){if($p -and (Test-Path $p)){$7z=$p;break}};',
+
+              // ---- Expand-OneArchive（インライン関数）
+              // .zip: Expand-Archive 試行 → 失敗なら 7-Zip
+              // その他: 7-Zip 直接
+              'function expand1{param($ap,$dd)',
+              '  $ex=[IO.Path]::GetExtension($ap).ToLower();',
+              '  if($ex -eq ".zip"){',
+              '    try{Expand-Archive -LiteralPath $ap -DestinationPath $dd -Force -EA Stop;return $true}',
+              '    catch{Write-Host "  [情報] Expand-Archive 失敗、7-Zip を試みます" -ForegroundColor DarkYellow}}',
+              '  if($null -eq $7z){',
+              '    Write-Host "  [警告] 7-Zip 未インストール。https://www.7-zip.org/ からインストールしてください: $([IO.Path]::GetFileName($ap))" -ForegroundColor Yellow;',
+              '    return $false}',
+              '  $a=@("x",$ap,("-o"+$dd),"-y");',
+              '  $p=Start-Process -FilePath $7z -ArgumentList $a -Wait -PassThru -NoNewWindow `',
+              '    -RedirectStandardOutput ($env:TEMP+"\\7z_stdout.txt") `',
+              '    -RedirectStandardError ($env:TEMP+"\\7z_stderr.txt");',
+              '  if($p.ExitCode -ne 0){',
+              '    $em="";if(Test-Path ($env:TEMP+"\\7z_stderr.txt")){$em=Get-Content ($env:TEMP+"\\7z_stderr.txt") -Raw -EA SilentlyContinue};',
+              '    Write-Host "  [エラー] 7-Zip 失敗(ExitCode=$($p.ExitCode)): $em" -ForegroundColor Red;',
+              '    return $false};',
+              '  return $true}',
+
+              // ---- STEP1: 元アーカイブを $dst へコピー（元ファイルは残す）
+              '$arcExts=@(".zip",".7z",".rar",".tar",".gz",".tgz",".bz2",".xz",".lzh",".cab");',
+              '$fname=[IO.Path]::GetFileName($src);',
+              '$arcDest=gufn $dst $fname;',
+              'Write-Host "  [コピー] $fname -> $([IO.Path]::GetFileName($arcDest))" -ForegroundColor Cyan;',
+              'Copy-Item -LiteralPath $src -Destination $arcDest -Force -EA Stop;',
+              'if(-not(Test-Path $arcDest)){',
+              '  Write-Host "  [エラー] コピー失敗: $arcDest" -ForegroundColor Red;exit 1};',
+
+              // ---- STEP2: 多パス再帰展開（$dst 内にアーカイブがなくなるまで）
+              'for($pass=0;$pass -lt 20;$pass++){',
+              '  $arcs=@(Get-ChildItem -LiteralPath $dst -Recurse -File|',
+              '    Where-Object{$arcExts -contains $_.Extension.ToLower()});',
+              '  if($arcs.Count -eq 0){break};',
+              '  Write-Host "  [パス $($pass+1)] $($arcs.Count) 個のアーカイブを展開中..." -ForegroundColor DarkCyan;',
+              '  foreach($arc in $arcs){',
+              '    $ap=$arc.FullName;$ad=$arc.DirectoryName;',
+              '    $ab=[IO.Path]::GetFileNameWithoutExtension($arc.Name);',
+              '    $td=gufn $ad $ab;',
+              '    Write-Host "    -> $($arc.Name)" -ForegroundColor Cyan;',
+              '    New-Item -ItemType Directory -Path $td -Force|Out-Null;',
+              '    $ok=expand1 $ap $td;',
+              '    if($ok){',
+              '      Remove-Item -LiteralPath $ap -Force -EA SilentlyContinue;',  // コピー先のアーカイブを削除（$dst内）
+              '      flatten $td;',
+              '      Get-ChildItem -LiteralPath $td -Force|%{',
+              '        $x=gufn $ad $_.Name;',
+              '        Move-Item -LiteralPath $_.FullName -Destination $x -Force -EA SilentlyContinue};',
+              '      Remove-Item -LiteralPath $td -Recurse -Force -EA SilentlyContinue;',
+              '      Write-Host "       完了: $($arc.Name)" -ForegroundColor Green',
+              '    }else{',
+              '      Write-Host "       スキップ（展開不可）: $($arc.Name)" -ForegroundColor Yellow;',
+              '      if(Test-Path $td){Remove-Item -LiteralPath $td -Recurse -Force -EA SilentlyContinue}}}};',
+
+              // ---- STEP3: 空フォルダ削除
+              'Get-ChildItem -LiteralPath $dst -Recurse -Directory|',
+              '  Sort-Object FullName -Desc|%{',
+              '    if(-not(Get-ChildItem -LiteralPath $_.FullName -Force)){',
+              '      Remove-Item -LiteralPath $_.FullName -Force -EA SilentlyContinue}};',
+              'Write-Host "  [完了] 展開処理が終わりました。元ファイルはそのまま残してあります: $fname" -ForegroundColor Green;',
+              'exit 0'
+            ].join('');
+
+            const arcB64 = toBase64Cmd(arcPsScript);
+            L.push('rem アーカイブ展開（多パス再帰・スマートフラットニング・衝突回避）');
+            L.push('rem 元ファイルはそのまま残します');
+            L.push('powershell -NoProfile -NonInteractive -EncodedCommand ' + arcB64);
+            L.push('if !errorlevel!==0 (');
+            L.push('  echo  [OK] アーカイブ展開完了: ' + fname);
+            L.push(') else (');
+            L.push('  echo  [注意] アーカイブ展開に失敗しました: ' + fname);
+            L.push(')');
+
+          } else {
+            // 通常ファイル: 衝突回避コピー（元ファイルは残す）
+            const fileCopyB64 = toBase64Cmd(
+              '$src=$env:ATT_FILE;$dst=$env:MAIL_DIR;' +
+              '[Console]::OutputEncoding=[Text.Encoding]::UTF8;' +
+              '$dn=[IO.Path]::GetFileName($src);' +
+              '$dd=Join-Path $dst $dn;$i=1;' +
+              'while(Test-Path $dd){' +
+                '$dd=Join-Path $dst (([IO.Path]::GetFileNameWithoutExtension($dn))+"($i)"+[IO.Path]::GetExtension($dn));$i++};' +
+              'Copy-Item -LiteralPath $src -Destination $dd -Force;' +
+              'Write-Host "  コピー先: $dd" -ForegroundColor DarkGray;' +
+              'exit 0'
+            );
+            L.push('rem 通常ファイルコピー（元ファイルはそのまま残します）');
+            L.push('powershell -NoProfile -NonInteractive -EncodedCommand ' + fileCopyB64);
+            L.push('if !errorlevel!==0 (');
+            L.push('  echo  [OK] コピー完了: ' + fname);
+            L.push(') else (');
+            L.push('  echo  [エラー] コピー失敗: ' + fname);
+            L.push(')');
+          }
+
+          L.push('');
+          L.push(':' + nextLabel);
+          L.push('set "ATT_FILE="');
+          L.push('');
         });
-      lines.push('');
-      lines.push(`echo  [OK] フォルダ一覧を作成: %LIST_FILE%`);
-    }
-
-    // ===== フッター =====
-    lines.push('');
-    lines.push('echo.');
-    lines.push('echo  ============================================================');
-    lines.push('echo  処理が完了しました。');
-    lines.push(`echo  保存先フォルダを開きますか?`);
-    lines.push('echo  ============================================================');
-    lines.push('echo.');
-    lines.push('set /p OPEN="保存先を開く場合はYを入力してEnterを押してください (Y/N): "');
-    lines.push('if /i "%OPEN%"=="Y" explorer "%DEST%"');
-    lines.push('');
-    lines.push('endlocal');
-    lines.push('pause');
-
-    const content = lines.join('\r\n');  // Windows改行
-    const blob = new Blob([content], { type: 'text/plain;charset=shift-jis' });
-    downloadBlob(blob, `joruri_mail_organize_${today}.bat`);
-    Toast.show('バッチファイルを生成しました (.bat)', 'success');
-    Log.append('📄 バッチファイル (.bat) を生成しました', 'success');
-  }
-
-  /**
-   * PowerShellスクリプト(.ps1)を生成してダウンロード
-   */
-  function generatePowerShell(queue, mailEntries) {
-    if (!queue || queue.length === 0) {
-      Toast.show('処理キューにファイルがありません', 'warning');
-      return;
-    }
-
-    const dest = Settings.get('batDestFolder') || '%USERPROFILE%\\Desktop\\メール';
-    const destPs = dest
-      .replace('%USERPROFILE%', '$env:USERPROFILE')
-      .replace('%TEMP%', '$env:TEMP');
-    const today = formatDate(new Date());
-    const lines = [];
-
-    // ===== ヘッダー =====
-    lines.push('# ============================================================');
-    lines.push('# JoruriMail 整理 PowerShellスクリプト');
-    lines.push(`# 生成日時: ${today}`);
-    lines.push('# ============================================================');
-    lines.push('# 使用方法:');
-    lines.push('#   1. このファイルを右クリック → "PowerShellで実行"');
-    lines.push('#   2. または: powershell -ExecutionPolicy Bypass -File "このファイル.ps1"');
-    lines.push('# ============================================================');
-    lines.push('');
-    lines.push('[Console]::OutputEncoding = [Text.Encoding]::UTF8');
-    lines.push('$ErrorActionPreference = "Continue"');
-    lines.push('');
-    lines.push('# ===== 設定 =====');
-    lines.push(`$DestBase = "${destPs}"`);
-    lines.push('$SearchPaths = @(');
-    lines.push('  "$env:USERPROFILE\\Downloads",');
-    lines.push('  "$env:USERPROFILE\\Desktop",');
-    lines.push('  "$env:USERPROFILE\\Documents"');
-    lines.push(')');
-    lines.push('');
-    lines.push('# ===== 保存先フォルダを作成 =====');
-    lines.push('if (-not (Test-Path $DestBase)) {');
-    lines.push('  New-Item -ItemType Directory -Path $DestBase -Force | Out-Null');
-    lines.push('  Write-Host "[作成] 保存先フォルダ: $DestBase" -ForegroundColor Cyan');
-    lines.push('}');
-    lines.push('');
-    lines.push('$Results = @()');
-    lines.push('');
-    lines.push('# ===== Zipファイルの展開処理 =====');
-
-    queue.forEach((item, idx) => {
-      const folderName = item.folderName || item.file.name.replace(/\.zip$/i, '');
-      const safeFolder = folderName.replace(/'/g, "''");
-      const origName = item.file.name.replace(/'/g, "''");
-
-      lines.push('');
-      lines.push(`# [${idx + 1}/${queue.length}] ${origName}`);
-      lines.push(`$ZipName = '${origName}'`);
-      lines.push(`$FolderName = '${safeFolder}'`);
-      lines.push('$ZipFile = $null');
-      lines.push('foreach ($dir in $SearchPaths) {');
-      lines.push('  $candidate = Join-Path $dir $ZipName');
-      lines.push('  if (Test-Path $candidate) { $ZipFile = $candidate; break }');
-      lines.push('}');
-      lines.push('');
-      lines.push('if ($null -eq $ZipFile) {');
-      lines.push('  Write-Host "[警告] Zipが見つかりません: $ZipName" -ForegroundColor Yellow');
-      lines.push(`  $Results += [PSCustomObject]@{ File = '$origName'; Status = '見つからない'; Folder = $FolderName }`);
-      lines.push('} else {');
-      lines.push('  $TargetDir = Join-Path $DestBase $FolderName');
-      lines.push('  try {');
-      lines.push('    Expand-Archive -LiteralPath $ZipFile -DestinationPath $TargetDir -Force');
-      lines.push('    Write-Host "[OK] 展開: $FolderName" -ForegroundColor Green');
-      lines.push('    Remove-Item -LiteralPath $ZipFile -Force');
-      lines.push('    Write-Host "[OK] Zip削除: $ZipName" -ForegroundColor Green');
-      lines.push(`    $Results += [PSCustomObject]@{ File = '$origName'; Status = '完了'; Folder = $FolderName }`);
-      lines.push('  } catch {');
-      lines.push('    Write-Host "[エラー] 展開失敗: $ZipName — $_" -ForegroundColor Red');
-      lines.push(`    $Results += [PSCustomObject]@{ File = '$origName'; Status = 'エラー'; Folder = $FolderName }`);
-      lines.push('  }');
-      lines.push('}');
+      }
     });
 
-    // ===== フォルダ一覧 =====
-    if (mailEntries && mailEntries.length > 0) {
-      lines.push('');
-      lines.push('# ===== メールフォルダ一覧の出力 =====');
-      lines.push(`$ListFile = Join-Path $DestBase 'mail_folder_list_${today}.txt'`);
-      lines.push(`$ListContent = @(`);
-      lines.push(`  "JoruriMail フォルダ一覧 (${today})"`)
-      lines.push(`  "=============================="`)
-      mailEntries.filter(e => e.isKept !== false).forEach(e => {
-        const safe = e.folderName.replace(/'/g, "''");
-        lines.push(`  '${safe}'`);
-      });
-      lines.push(')');
-      lines.push('$ListContent | Out-File -FilePath $ListFile -Encoding UTF8');
-      lines.push('Write-Host "[OK] フォルダ一覧を保存: $ListFile" -ForegroundColor Cyan');
-    }
+    L.push('echo.');
+    L.push('echo  ====================================================');
+    L.push('echo  整理が完了しました！');
+    L.push('echo  ※ 元の添付ファイルはそのまま残してあります');
+    L.push('echo  ====================================================');
+    L.push('echo.');
+    L.push('set /p OPEN="デスクトップの「メール」フォルダを開きますか？(Y/N): "');
+    L.push('if /i "!OPEN!"=="Y" explorer "%DEST%"');
+    L.push('endlocal');
+    L.push('pause');
 
-    // ===== 結果サマリー =====
-    lines.push('');
-    lines.push('# ===== 結果サマリー =====');
-    lines.push('Write-Host ""');
-    lines.push('Write-Host "============================================================" -ForegroundColor Cyan');
-    lines.push('Write-Host "  処理完了" -ForegroundColor Cyan');
-    lines.push('Write-Host "============================================================" -ForegroundColor Cyan');
-    lines.push('$Results | Format-Table -AutoSize');
-    lines.push('');
-    lines.push('$ans = Read-Host "保存先フォルダを開きますか? (Y/N)"');
-    lines.push('if ($ans -imatch "^Y") { Start-Process explorer.exe $DestBase }');
-    lines.push('');
-    lines.push('Read-Host "Enterを押して終了してください"');
-
-    const content = lines.join('\r\n');
-    const bom = '\uFEFF';
-    const blob = new Blob([bom + content], { type: 'text/plain;charset=utf-8' });
-    downloadBlob(blob, `joruri_mail_organize_${today}.ps1`);
-    Toast.show('PowerShellスクリプトを生成しました (.ps1)', 'success');
-    Log.append('📄 PowerShellスクリプト (.ps1) を生成しました', 'success');
+    const blob = new Blob([L.join('\r\n')], { type: 'text/plain;charset=utf-8' });
+    dlBlob(blob, 'joruri_mail_' + today + '.bat');
+    Toast.show('バッチファイルを生成しました！', 'success');
   }
 
-  // ===== ユーティリティ =====
-
-  function sanitizeWindowsPath(s) {
-    // Windowsのパス非許可文字を除去（バッチファイル用）
-    return String(s)
-      .replace(/[\/\*\?\"<>\|]/g, '_')
-      .replace(/:/g, '_')
-      .trim();
+  // ── ユーティリティ ──────────────────────────────────────
+  function winSafe(s) {
+    return String(s).replace(/[\/\*\?"<>|]/g, '_').replace(/:/g, '_').trim();
   }
 
-  function formatDate(d) {
-    return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+  function fmtDate(d) {
+    return '' + d.getFullYear() +
+      String(d.getMonth() + 1).padStart(2, '0') +
+      String(d.getDate()).padStart(2, '0');
   }
 
-  function downloadBlob(blob, filename) {
+  function dlBlob(blob, name) {
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
+    const a   = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click();
     setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
   }
 
-  return { generateBat, generatePowerShell };
+  return { generateBat };
 })();
