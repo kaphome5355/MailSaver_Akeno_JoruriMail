@@ -1,6 +1,6 @@
 /**
  * app.js — メインコントローラー（新仕様版）
- * STEP1: 本文保存 → STEP2: 添付ファイル登録 → STEP3: バッチ生成
+ * STEP1: 本文保存 → STEP2: 添付ファイル登録 → STEP3: バッチ生成・実行
  */
 
 // ===== トースト通知 =====
@@ -431,11 +431,6 @@ class App {
     // バッチ生成
     document.getElementById('generateBatBtn')?.addEventListener('click', () => {
       BatchGenerator.generateBat(this.savedMails, this.attachItems);
-    });
-
-    // PowerShell 生成
-    document.getElementById('generatePsBtn')?.addEventListener('click', () => {
-      BatchGenerator.generatePs(this.savedMails, this.attachItems);
     });
   }
 

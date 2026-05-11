@@ -60,7 +60,7 @@
         　→　
         <span class="inline-flex items-center gap-1">
           <span class="bg-blue-600 text-white rounded-full w-4 h-4 inline-flex items-center justify-center text-xs font-bold shrink-0">4</span>
-          <strong>バッチファイルを生成・実行</strong>してデスクトップの「メール」フォルダへ整理
+          <strong>バッチファイルを生成・ダブルクリックで実行</strong>してデスクトップの「メール」フォルダへ整理
         </span>
       </div>
     </div>
@@ -81,7 +81,7 @@
       <div class="step-line flex-1 h-0.5 mx-3 bg-slate-200 transition-all duration-500" id="line-2-3"></div>
       <div class="step-indicator flex items-center" data-step="3">
         <div class="step-circle w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 bg-slate-200 text-slate-400">3</div>
-        <span class="ml-2 text-sm font-semibold text-slate-400 whitespace-nowrap">バッチ生成・実行</span>
+        <span class="ml-2 text-sm font-semibold text-slate-400 whitespace-nowrap">バッチ生成</span>
       </div>
     </div>
   </div>
@@ -299,7 +299,7 @@
           </div>
           <div>
             <h2 class="text-base font-bold text-slate-800">STEP 3 — バッチファイルを生成して実行</h2>
-            <p class="text-xs text-slate-400">バッチファイルを生成・実行するとデスクトップの「メール」フォルダへ自動整理されます</p>
+            <p class="text-xs text-slate-400">バッチファイルをダウンロードしてダブルクリックで実行するとデスクトップの「メール」フォルダへ自動整理されます</p>
           </div>
         </div>
       </div>
@@ -315,39 +315,31 @@
         </div>
 
         <!-- バッチ実行手順ガイド -->
-        <!-- PS1推奨バナー -->
-        <div class="mb-4 bg-indigo-50 border border-indigo-200 rounded-xl p-4 flex gap-3 items-start">
-          <svg class="w-5 h-5 text-indigo-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
-          <div class="text-xs text-indigo-800 leading-relaxed">
-            <strong class="text-indigo-900">PowerShellスクリプト版（.ps1）を推奨します</strong><br>
-            .7z / .rar / .tar / .gz などの全形式に対応、パスワード付きアーカイブのプロンプト入力、スマートフラットニング、命名衝突の枝番付与がすべて利用できます。<br>
-            <span class="text-indigo-600">.bat 版は .zip のみ高度展開対応。.7z/.rar等は .ps1 版でご利用ください。</span>
-          </div>
-        </div>
         <div class="mb-5 bg-amber-50 border border-amber-200 rounded-xl p-4">
-          <p class="text-xs font-bold text-amber-800 mb-2">📌 実行手順（.ps1 推奨 / .bat でも可）</p>
+          <p class="text-xs font-bold text-amber-800 mb-2">📌 実行手順</p>
           <ol class="text-xs text-amber-800 space-y-1 list-none">
-            <li class="flex gap-2"><span class="bg-amber-400 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold shrink-0 text-xs">1</span>下の「<strong>PowerShellスクリプトを生成（.ps1）</strong>」ボタンを押す → .ps1 ファイルがダウンロードされる</li>
-            <li class="flex gap-2"><span class="bg-amber-400 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold shrink-0 text-xs">2</span>ダウンロードフォルダを開き、<strong>.ps1 ファイルを右クリック→「PowerShellで実行」</strong></li>
-            <li class="flex gap-2"><span class="bg-amber-400 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold shrink-0 text-xs">3</span>「このシステムではスクリプトの実行が無効」と出た場合は .bat 版を使うか、管理者PowerShellで <code class="bg-amber-100 px-1 rounded">Set-ExecutionPolicy RemoteSigned</code> を実行</li>
-            <li class="flex gap-2"><span class="bg-amber-400 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold shrink-0 text-xs">4</span>パスワード付きアーカイブがある場合は<strong>コンソール上でパスワード入力を求められます</strong>（最大3回リトライ）</li>
-            <li class="flex gap-2"><span class="bg-amber-400 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold shrink-0 text-xs">5</span>完了後 <strong>「Y」を入力→ Enter</strong> でメールフォルダが開く</li>
+            <li class="flex gap-2"><span class="bg-amber-400 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold shrink-0 text-xs">1</span>下の「<strong>バッチファイルを生成（.bat）</strong>」ボタンを押す → .bat ファイルがダウンロードされる</li>
+            <li class="flex gap-2"><span class="bg-amber-400 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold shrink-0 text-xs">2</span>添付ファイルが <strong>ダウンロード・デスクトップ・ドキュメント</strong> フォルダのいずれかにあることを確認する</li>
+            <li class="flex gap-2"><span class="bg-amber-400 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold shrink-0 text-xs">3</span>ダウンロードされた <strong>.bat ファイルをダブルクリック</strong>して実行する</li>
+            <li class="flex gap-2"><span class="bg-amber-400 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold shrink-0 text-xs">4</span>完了後 <strong>「Y」→ Enter</strong> でデスクトップの「メール」フォルダが開く</li>
+            <li class="flex gap-2"><span class="bg-amber-400 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold shrink-0 text-xs">5</span><strong>元の添付ファイルは削除されません</strong>。整理後もダウンロードフォルダ等にそのまま残ります</li>
           </ol>
+        </div>
+        <div class="mb-5 bg-blue-50 border border-blue-200 rounded-xl p-4 flex gap-3 items-start">
+          <svg class="w-5 h-5 text-blue-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <div class="text-xs text-blue-800 leading-relaxed">
+            <strong class="text-blue-900">.zip は自動で再帰展開されます</strong><br>
+            入れ子になった ZIP も最大20段階まで完全展開します。<br>
+            .7z / .rar / .tar / .gz 等は <a href="https://www.7-zip.org/" target="_blank" class="underline text-blue-600">7-Zip</a> をインストールすることで展開できます（未インストール時はコピーのみ）。
+          </div>
         </div>
 
         <!-- アクションボタン -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <button id="generatePsBtn"
-            class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-sm shadow-indigo-200 transition-all flex items-center justify-center gap-2 text-sm">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-            </svg>
-            PowerShellスクリプトを生成（.ps1）★推奨
-          </button>
+        <div class="flex justify-center">
           <button id="generateBatBtn"
-            class="w-full py-4 bg-slate-500 hover:bg-slate-600 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 text-sm">
+            class="w-full max-w-sm py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-sm shadow-blue-200 transition-all flex items-center justify-center gap-2 text-sm">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
             </svg>
